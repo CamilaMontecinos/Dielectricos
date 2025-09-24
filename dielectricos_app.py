@@ -82,7 +82,7 @@ Er, Ez, Emag, img = compute_fields(R, Z, Rnorm, eps_r, eps_rsp, a, Eo, Emax)
 col_plot, col_legend = st.columns([5, 1], vertical_alignment="center")
 
 with col_plot:
-    fig, ax = plt.subplots(figsize=(7, 7))
+    fig, ax = plt.subplots(figsize=(5, 5))
     ax.imshow(img, extent=[-SPAN, SPAN, -SPAN, SPAN], origin='lower', aspect='equal')
 
     # Esfera
@@ -120,5 +120,6 @@ with col_legend:
     st.pyplot(fig_lg, clear_figure=True)
 
 st.caption("© Domenico Sapone, Camila Montecinos")
+
 
 
