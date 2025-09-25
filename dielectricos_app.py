@@ -1,20 +1,22 @@
 # app.py
+import io
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from matplotlib.patches import Circle
 import streamlit as st
-import io
 
 st.set_page_config(page_title="Esfera en dieléctrico", layout="wide")
 
+# ----------------------------
 # Parámetros fijos (como tu script original)
+# ----------------------------
 a = 1.0
 Eo = 1.0
 Emax = 3.0
-NR = 200  # resolución r
-NZ = 200  # resolución z
-SPAN = 3.0  # extensión +/- 3
+NR = 200          # resolución r
+NZ = 200          # resolución z
+SPAN = 3.0        # extensión +/- 3
 STEP_QUIVER = 12  # densidad flechas
 
 @st.cache_data(show_spinner=False)
@@ -57,10 +59,9 @@ def compute_fields(R, Z, Rnorm, eps_r, eps_rsp, a, Eo, Emax):
     return Er, Ez, Emag, img
 
 # ----------------------------
-# Controles
+# Controles (solo los 3 solicitados)
 # ----------------------------
 st.sidebar.title("Controles")
-
 eps_r = st.sidebar.slider("ε_medio", min_value=1, max_value=100, value=1, step=1)
 
 eps_rsp_val = st.sidebar.slider("ε_esfera", min_value=1, max_value=100, value=1, step=1)
@@ -74,66 +75,63 @@ else:
 # ----------------------------
 # Cálculo
 # ----------------------------
-r, z, R, Z, Rnorm = precompute_mesh()
+_, _, R, Z, Rnorm = precompute_mesh()
 Er, Ez, Emag, img = compute_fields(R, Z, Rnorm, eps_r, eps_rsp, a, Eo, Emax)
 
 # ----------------------------
-# Layout y gráficos
+# Figura única: gráfico + leyenda juntos (pegados)
 # ----------------------------
-col_plot, col_legend = st.columns([5, 1], vertical_alignment="center")
+fig, (ax, ax_lg) = plt.subplots(
+    1, 2,
+    figsize=(6.0, 4.2),  # tamaño físico de la figura (se escalará abajo con width)
+    gridspec_kw={'width_ratios': [5, 0.55]}
+)
+fig.subplots_adjust(left=0.08, right=0.98, bottom=0.12, top=0.9, wspace=0.18)
 
-with col_plot:
-    fig, ax = plt.subplots(figsize=(4, 4))
-    ax.imshow(img, extent=[-SPAN, SPAN, -SPAN, SPAN], origin='lower', aspect='equal')
+# --- gráfico principal ---
+ax.imshow(img, extent=[-SPAN, SPAN, -SPAN, SPAN], origin='lower', aspect='equal')
+circle_patch = Circle((0, 0), a, edgecolor='k', fill=False, lw=2)
+ax.add_patch(circle_patch)
 
-    # Esfera
-    circle_patch = Circle((0, 0), a, edgecolor='k', fill=False, lw=2)
-    ax.add_patch(circle_patch)
+skip = (slice(None, None, STEP_QUIVER), slice(None, None, STEP_QUIVER))
+Er_u = np.zeros_like(Er); Ez_u = np.zeros_like(Ez)
+mask = Emag > 0
+Er_u[mask] = Er[mask] / Emag[mask]
+Ez_u[mask] = Ez[mask] / Emag[mask]
+ax.quiver(R[skip], Z[skip], Er_u[skip], Ez_u[skip], color='k')
 
-    # Flechas normalizadas
-    skip = (slice(None, None, STEP_QUIVER), slice(None, None, STEP_QUIVER))
-    Er_u = np.zeros_like(Er); Ez_u = np.zeros_like(Ez)
-    mask = Emag > 0
-    Er_u[mask] = Er[mask] / Emag[mask]
-    Ez_u[mask] = Ez[mask] / Emag[mask]
-    ax.quiver(R[skip], Z[skip], Er_u[skip], Ez_u[skip], color='k')
+ax.set_xlabel(r'$r/a$')
+ax.set_ylabel(r'$z/a$')
+ax.set_title("Campo eléctrico – dieléctrico")
+ax.set_xlim(-SPAN, SPAN)
+ax.set_ylim(-SPAN, SPAN)
+ax.set_aspect('equal', adjustable='box')
 
-    ax.set_xlabel(r'$r/a$')
-    ax.set_ylabel(r'$z/a$')
-    ax.set_title("Campo eléctrico – dieléctrico")
-    ax.set_xlim(-SPAN, SPAN)
-    ax.set_ylim(-SPAN, SPAN)
-    ax.set_aspect('equal', adjustable='box')
+# --- leyenda ---
+y_legend = np.linspace(0, 3, 300)
+ratio_legend = y_legend / 3
+colors_legend = huefunc_array(ratio_legend)
+legend_img = np.tile(colors_legend[:, None, :], (1, 1, 1))
 
-    # Guardar como imagen
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=120, bbox_inches="tight")
-    st.image(buf, width=400)  # Ajusta el ancho en píxeles
+ax_lg.imshow(legend_img, extent=[0, 1, 0, 3], origin='lower', aspect='auto')
+ax_lg.set_xticks([])
+ax_lg.set_yticks([0, 1, 2, 3])
+ax_lg.set_ylabel(r'$|\!\,E\,\!|/E_0$')
+ax_lg.set_title("Leyenda", pad=10)
 
-with col_legend:
-    y_legend = np.linspace(0, 3, 300)
-    ratio_legend = y_legend / 3
-    colors_legend = huefunc_array(ratio_legend)
-    legend_img = np.tile(colors_legend[:, None, :], (1, 1, 1))
-
-    fig_lg, ax_lg = plt.subplots(figsize=(0.8, 4))
-    ax_lg.imshow(legend_img, extent=[0, 1, 0, 3], origin='lower', aspect='auto')
-    ax_lg.set_xticks([])
-    ax_lg.set_yticks([0, 1, 2, 3])
-    ax_lg.set_ylabel(r'$|\!\,E\,\!|/E_0$')
-    ax_lg.set_title("Leyenda", pad=10)
-
-    buf_lg = io.BytesIO()
-    fig_lg.savefig(buf_lg, format="png", dpi=120, bbox_inches="tight")
-    st.image(buf_lg, width=120)
+# Exportar como imagen y centrar en Streamlit con ancho controlado
+buf = io.BytesIO()
+fig.savefig(buf, format="png", dpi=130, bbox_inches="tight")
+st.image(buf, width=560)  # ← ajusta este ancho (px) para ver más chico o más grande
 
 # ----------------------------
-# Caption más grande
-# ----------------------------
+# Caption
+
 st.markdown(
     "<p style='text-align: center; font-size:20px; color:gray;'>© Domenico Sapone, Camila Montecinos</p>",
     unsafe_allow_html=True
 )
+
 
 
 
