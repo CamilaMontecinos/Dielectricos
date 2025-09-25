@@ -64,7 +64,7 @@ def compute_fields(R, Z, Rnorm, eps_r, eps_rsp, a, Eo, Emax):
 st.sidebar.title("Controles")
 eps_r = st.sidebar.slider("ε_medio", min_value=1, max_value=100, value=1, step=1)
 
-eps_rsp_val = st.sidebar.slider("ε_esfera", min_value=1, max_value=100, value=1, step=1)
+eps_rsp_val = st.sidebar.slider("ε_esfera", min_value=1, max_value=10, value=1, step=1)
 conductor = st.sidebar.checkbox("ε_esfera → ∞ (esfera conductora)", value=False)
 if conductor:
     eps_rsp = np.inf
@@ -131,6 +131,7 @@ st.markdown(
     "<p style='text-align: center; font-size:20px; color:gray;'>© Domenico Sapone, Camila Montecinos</p>",
     unsafe_allow_html=True
 )
+
 
 
 
