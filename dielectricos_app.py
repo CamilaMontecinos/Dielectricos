@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from matplotlib.patches import Circle
 import streamlit as st
+import io
 
 st.set_page_config(page_title="Esfera en dieléctrico", layout="wide")
 
@@ -56,7 +57,7 @@ def compute_fields(R, Z, Rnorm, eps_r, eps_rsp, a, Eo, Emax):
     return Er, Ez, Emag, img
 
 # ----------------------------
-# Controles (en el orden pedido)
+# Controles
 # ----------------------------
 st.sidebar.title("Controles")
 
@@ -82,7 +83,7 @@ Er, Ez, Emag, img = compute_fields(R, Z, Rnorm, eps_r, eps_rsp, a, Eo, Emax)
 col_plot, col_legend = st.columns([5, 1], vertical_alignment="center")
 
 with col_plot:
-    fig, ax = plt.subplots(figsize=(5, 5))
+    fig, ax = plt.subplots(figsize=(4, 4))
     ax.imshow(img, extent=[-SPAN, SPAN, -SPAN, SPAN], origin='lower', aspect='equal')
 
     # Esfera
@@ -99,11 +100,15 @@ with col_plot:
 
     ax.set_xlabel(r'$r/a$')
     ax.set_ylabel(r'$z/a$')
-    ax.set_title("Dieléctrico")
+    ax.set_title("Campo eléctrico – dieléctrico")
     ax.set_xlim(-SPAN, SPAN)
     ax.set_ylim(-SPAN, SPAN)
     ax.set_aspect('equal', adjustable='box')
-    st.pyplot(fig, clear_figure=True)
+
+    # Guardar como imagen
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", dpi=120, bbox_inches="tight")
+    st.image(buf, width=400)  # Ajusta el ancho en píxeles
 
 with col_legend:
     y_legend = np.linspace(0, 3, 300)
@@ -111,15 +116,25 @@ with col_legend:
     colors_legend = huefunc_array(ratio_legend)
     legend_img = np.tile(colors_legend[:, None, :], (1, 1, 1))
 
-    fig_lg, ax_lg = plt.subplots(figsize=(1.2, 6))
+    fig_lg, ax_lg = plt.subplots(figsize=(0.8, 4))
     ax_lg.imshow(legend_img, extent=[0, 1, 0, 3], origin='lower', aspect='auto')
     ax_lg.set_xticks([])
     ax_lg.set_yticks([0, 1, 2, 3])
     ax_lg.set_ylabel(r'$|\!\,E\,\!|/E_0$')
     ax_lg.set_title("Leyenda", pad=10)
-    st.pyplot(fig_lg, clear_figure=True)
 
-st.caption("© Domenico Sapone, Camila Montecinos")
+    buf_lg = io.BytesIO()
+    fig_lg.savefig(buf_lg, format="png", dpi=120, bbox_inches="tight")
+    st.image(buf_lg, width=120)
+
+# ----------------------------
+# Caption más grande
+# ----------------------------
+st.markdown(
+    "<p style='text-align: center; font-size:20px; color:gray;'>© Domenico Sapone, Camila Montecinos</p>",
+    unsafe_allow_html=True
+)
+
 
 
 
